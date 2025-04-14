@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block content %}
+
+<button type="button" class="btn btn-primary btn-custom m-5" @click="sendData">任務1</button>
+<button type="button" class="btn btn-primary btn-custom m-5" @click="sendData">任務2</button>
+
+
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">提示</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">[[ message ]]</div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block username %}[[ userData ]]{% endblock %}
+
+{% block js %}
+<script type="module">
+    const { createApp, ref, onMounted, onUnmounted } = Vue;
+    const app = createApp({
+        setup() {
+
+            const message = ref("");
+            const loading = ref(true);  // 讀取狀態
+            const userData = ref(null);
+
+            const api = axios.create({
+                baseURL: 'http://localhost:5000',
+            });
+
+            let myModal = null; // 儲存 Bootstrap Modal 實例
+
+            onMounted( async () => {
+                // check user has permission
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    // 沒有 token，直接跳轉到登入頁面
+                    window.location.href = '/login'
+                    return;
+                }
+
+                try {
+                    // 確認 token 是否有效
+                    const res = await axios.get('/profile', {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    userData.value = res.data.logged_in_as;  // 如果 token 有效，將用戶資料設置進去
+                } catch (err) {
+                    // 如果 token 無效，清除 token 並跳轉到登入頁
+                    localStorage.removeItem('token');
+                    window.location.href = '/login'
+                } finally {
+                    loading.value = false;
+                }
+
+                const modalElement = document.getElementById('exampleModal');
+                myModal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static', // 禁止點擊背景關閉
+                    keyboard: false // 禁止按 Esc 關閉
+                });
+            });
+
+
+
+            onMounted( async () => {
+                // check user has permission
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    // 沒有 token，直接跳轉到登入頁面
+                    window.location.href = '/login'
+                    return;
+                }
+
+                try {
+                    // 確認 token 是否有效
+                    const res = await axios.get('/profile', {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    userData.value = res.data.logged_in_as;  // 如果 token 有效，將用戶資料設置進去
+                } catch (err) {
+                    // 如果 token 無效，清除 token 並跳轉到登入頁
+                    localStorage.removeItem('token');
+                    window.location.href = '/login'
+                } finally {
+                    loading.value = false;
+                }
+
+                const modalElement = document.getElementById('exampleModal');
+                myModal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static', // 禁止點擊背景關閉
+                    keyboard: false // 禁止按 Esc 關閉
+                });
+                const createModalElement = document.getElementById('createModal');
+                createModal = new bootstrap.Modal(createModalElement, {
+                    backdrop: 'static', // 禁止點擊背景關閉
+                    keyboard: false // 禁止按 Esc 關閉
+                });
+                const updateModalElement = document.getElementById('updateModal');
+                updateModal = new bootstrap.Modal(updateModalElement, {
+                    backdrop: 'static', // 禁止點擊背景關閉
+                    keyboard: false // 禁止按 Esc 關閉
+                });
+
+                getData()
+
+                intervalId = setInterval(async () => {
+                    getData()
+                }, 1000); // 每秒執行一次請求
+            });
+
+
+
+
+            const sendData = async () => {
+                try {
+                    const response = await api.post('/missions/testuser');
+                    message.value = JSON.stringify(response.data.message);
+                    myModal.show();
+
+                    // 延遲關閉
+                    setTimeout(() => {
+                        // 移除焦點
+                        if (document.activeElement) {
+                            document.activeElement.blur();
+                        }
+
+                        // 或將焦點轉移到頁面上的某個元素
+                        document.getElementById('app').focus();
+
+                        myModal.hide(); // 關閉 Modal
+                    }, 1500);
+
+                } catch (error) {
+                    message.value = error.message;
+                    console.log(error);
+                }
+            };
+
+            return { message, userData, sendData };
+        }
+    });
+
+    // 設定自訂的插值符號，以避免與 Jinja2 衝突
+    app.config.compilerOptions.delimiters = ['[[', ']]'];
+    app.mount('#app');
+
+</script>
+{% endblock %}
