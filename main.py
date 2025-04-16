@@ -52,5 +52,5 @@ if __name__ == "__main__":
     fastapi_main.mount("/flask", WSGIMiddleware(flask_main))
 
     # 若在本地測試，可啟動 Uvicorn
-    uvicorn.run(fastapi_main, host="127.0.0.1", port=8000)
+    uvicorn.run(fastapi_main, host="0.0.0.0", port=8000)
     print("✅ 所有服務已啟動")
