@@ -107,7 +107,7 @@
                     localStorage.setItem('token', response.data.access_token);
                     localStorage.setItem('logged_in_as', response.data.logged_in_as);
                     console.log('token: ',response.data.access_token)
-                    window.location.href = '/flask'
+                    window.location.href = '/flask/index'
 
                 } catch (err) {
                     error.value = '無法獲取資料：' + err.message;
