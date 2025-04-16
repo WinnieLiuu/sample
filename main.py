@@ -1,10 +1,12 @@
-from flask_app.routes import app  # Flask 應用
+from flask_app.routes import flask_main  # Flask 應用
+from fastapi.middleware.wsgi import WSGIMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Thread
 import sys
 import signal
-from fastapi_app import main as fastapi_main  # FastAPI 應用
+from fastapi_app.app import fastapi_main  # FastAPI 應用
 from shared_state import missions_dict, update_missions, delete_mission
+import uvicorn
 
 timecount = 0
 
@@ -34,7 +36,7 @@ def start_scheduler():
 
 # 執行 Flask
 def run_app():
-    app.run(port=3000, debug=True, use_reloader=False)
+    flask_main.run(port=3000, debug=True, use_reloader=False)
 
 # Ctrl+C 結束程序
 def signal_handler(sig, frame):
@@ -46,17 +48,9 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
 
     start_scheduler()
+    # 掛載 Flask 應用到 FastAPI (此例會將所有 /hello_flask 的請求轉給 Flask 處理)
+    fastapi_main.mount("/flask", WSGIMiddleware(flask_main))
 
-    t1 = Thread(target=run_app, daemon=True)                  # 啟動 Flask
-    t2 = Thread(target=fastapi_main.start_fastapi, daemon=True)  # 啟動 FastAPI
-
-    t1.start()
-    t2.start()
+    # 若在本地測試，可啟動 Uvicorn
+    uvicorn.run(fastapi_main, host="127.0.0.1", port=8000)
     print("✅ 所有服務已啟動")
-
-    try:
-        while True:
-            pass
-    except KeyboardInterrupt:
-        print("✅ APScheduler 已停止")
-        sys.exit(0)

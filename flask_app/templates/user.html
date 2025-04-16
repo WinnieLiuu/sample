@@ -111,7 +111,7 @@
 <script type="module">
 
     window.vueApp.getdataFromAPI = function() {
-        const url = '/users'; // ✅ API 路徑
+        const url = '/api/users'; // ✅ API 路徑
         this.getdata(url);
     };
 
@@ -128,19 +128,19 @@
         const name = window.vueApp.selectedUser.name;
         const password = window.vueApp.selectedUser.password;
 
-        const url = `/users?account=${account}&name=${name}&password=${password}`; // ✅ API 路徑
+        const url = `/api/users?account=${account}&name=${name}&password=${password}`; // ✅ API 路徑
        
         // 用 call 綁定 Vue 實例
         window.vueApp.senddata(url, '');
     };
 
     window.vueApp.deldataFromAPI = function(account) {
-        const url = `/users/${account}`; // ✅ API 路徑
+        const url = `/api/users/${account}`; // ✅ API 路徑
         this.deldata(url);
     };
 
     window.vueApp.updatedataFromAPI = function(account) {
-        const url = `/users/${account}`; // ✅ API 路徑
+        const url = `/api/users/${account}`; // ✅ API 路徑
         const dapayloadta = {
             'name': window.vueApp.selectedUser.name,
             'password': window.vueApp.selectedUser.password,

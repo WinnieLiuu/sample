@@ -1,5 +1,5 @@
 from fastapi.openapi.utils import get_openapi
-from fastapi_app.main import app
+from fastapi_app.app import fastapi_main
 
 tags_metadata = [
     {
@@ -45,7 +45,7 @@ def full_openapi():
         title="RESTful API",
         version="1.0.0",
         description="登入後可使用所有功能。",
-        routes=[route for route in app.routes if "/logout" not in route.path and "/login" not in route.path],
+        routes=[route for route in fastapi_main.routes if "/logout" not in route.path and "/login" not in route.path],
         tags=[tag for tag in tags_metadata if tag["name"] not in ["login","logout"]]
     )
 

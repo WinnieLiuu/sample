@@ -63,7 +63,7 @@
 <script type="module">
 
     window.vueApp.getdataFromAPI = function() {
-        const url = '/missions'; // ✅ API 路徑
+        const url = '/api/missions'; // ✅ API 路徑
         this.getdata(url);
     };
 
@@ -76,7 +76,7 @@
     }, 1000);
 
     window.vueApp.deldataFromAPI = function(missionid) {
-        const url = `/missions/${missionid}`; // ✅ API 路徑
+        const url = `/api/missions/${missionid}`; // ✅ API 路徑
         window.vueApp.deldata(url);
     };
 

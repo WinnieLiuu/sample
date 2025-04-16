@@ -10,7 +10,7 @@
 <script type="module">
     
     window.vueApp.senddataFromAPI = function(missionName) {
-        const url = `/missions/${missionName}`; // ✅ API 路徑
+        const url = `/api/missions/${missionName}`; // ✅ API 路徑
         window.vueApp.senddata(url, '');
     };
     

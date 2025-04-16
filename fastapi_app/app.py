@@ -27,18 +27,15 @@ tags_metadata = [
     },
 ]
 
-SECRET_KEY = 'your_secret_key'
-ALGORITHM = "HS256"
-
 # === App 初始化 ===
-app = FastAPI(
+fastapi_main = FastAPI(
     docs_url=None,         # 關閉內建 /docs
     redoc_url=None,        # 關閉 /redoc
     openapi_url="/openapi.json",  # 可自訂 openapi 路由（保留）
 )
 
 # 若你從前端測試，需啟用 CORS（Swagger 內建不需要）
-app.add_middleware(
+fastapi_main.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -65,29 +62,7 @@ for file in router_files:
 
     # 假設每個模組有一個名為 router 的變數 (FastAPI Router 物件)
     if hasattr(module, 'router'):
-        app.include_router(module.router)
-
-# === OAuth2 定義 ===
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/access-token")
-
-# === 使用者驗證 ===
-# def verify_token(token: str = Depends(oauth2_scheme)):
-#     try:
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-#         username: str = payload.get("sub")
-#         if username is None:
-#             raise HTTPException(
-#                 status_code=status.HTTP_401_UNAUTHORIZED,
-#                 detail="Token payload error",
-#                 headers={"WWW-Authenticate": "Bearer"},
-#             )
-#         return username
-#     except PyJWTError:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Could not validate token",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
+        fastapi_main.include_router(module.router)
 
 # === 自定義 OpenAPI ===
 def simplified_openapi():
@@ -151,20 +126,20 @@ BASE_DIR = os.path.dirname(__file__)
 
 # 靜態資料夾位置
 static_path = os.path.join(BASE_DIR, "static")
-app.mount("/static", StaticFiles(directory=static_path), name="static")
+fastapi_main.mount("/static", StaticFiles(directory=static_path), name="static")
 
-@app.get("/docs", include_in_schema=False)
+@fastapi_main.get("/docs", include_in_schema=False)
 async def custom_swagger_ui():
     file_path = os.path.join(static_path, "swagger-ui.html")
     return FileResponse(file_path)
 
 # 初始顯示簡化版文件
-app.openapi_schema = simplified_openapi()
-app.openapi = lambda: app.openapi_schema
+fastapi_main.openapi_schema = simplified_openapi()
+fastapi_main.openapi = lambda: fastapi_main.openapi_schema
 
 def start_fastapi():
-    uvicorn.run(app, host="127.0.0.1", port=5000)
+    uvicorn.run(fastapi_main, host="127.0.0.1", port=3000)
 
 # === 測試入口 ===
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=5000, reload=True)
+    uvicorn.run("app:fastapi_main", host="127.0.0.1", port=3000, reload=True)

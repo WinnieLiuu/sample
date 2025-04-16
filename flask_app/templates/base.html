@@ -78,7 +78,7 @@
             <nav class="sidebar sidebar-offcanvas" id="sidebar">
                 <ul class="nav">
                     <li class="nav-item menu-items">
-                        <a class="nav-link" href="/index">
+                        <a class="nav-link" href="/flask/index">
                             <span class="menu-icon">
                                 <i class="mdi mdi-clipboard-check"></i>
                             </span>
@@ -86,7 +86,7 @@
                         </a>
                     </li>
                     <li class="nav-item menu-items">
-                        <a class="nav-link" href="/mission">
+                        <a class="nav-link" href="/flask/mission">
                             <span class="menu-icon">
                                 <i class="mdi mdi-target"></i>
                             </span>
@@ -94,7 +94,7 @@
                         </a>
                     </li>
                     <li class="nav-item menu-items">
-                        <a class="nav-link" href="/user">
+                        <a class="nav-link" href="/flask/user">
                             <span class="menu-icon">
                                 <i class="mdi mdi-account"></i>
                             </span>
@@ -206,8 +206,7 @@
         <script src="{{ url_for('static', filename='vendors/js/todolist.js') }}"></script>
         <script src="{{ url_for('static', filename='vendors/js/dashboard.js') }}"></script>
         <!-- endinject -->
-        <!-- Custom js for this page -->
-        
+        <!-- Custom js for this page -->        
         <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
         <script src="{{ url_for('static', filename='node_modules/axios/dist/axios.min.js') }}"></script>
         <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
@@ -217,7 +216,7 @@
         <script type="module">
             const { createApp, ref, onMounted, onUnmounted, computed, watchEffect } = Vue;
             const gettoken = localStorage.getItem('token');
-            const api = axios.create({baseURL: 'http://localhost:5000'});
+            // const api = axios.create({baseURL: 'http://localhost:5000'});
 
             const account = null; // 綁定輸入值
             const name = null; // 綁定輸入值
@@ -289,7 +288,7 @@
                         // 清除本地端儲存的 token
                         localStorage.removeItem('token');
                         // 跳轉到登錄頁面
-                        window.location.href = '/logout';
+                        window.location.href = '/flask/logout';
                     },
                     
                     updateTimeLeft() {
@@ -321,7 +320,7 @@
                     // 共用 GET 方法，傳入 URL
                     async getdata(url) {
                         try {
-                            const response = await api.get(url, {
+                            const response = await axios.get(url, {
                                 headers: {
                                     Authorization: `Bearer ${gettoken}`
                                 }
@@ -330,7 +329,7 @@
                         } catch (err) {
                             if (err.response && err.response.status === 401) {
                                 alert("登入已過期，請重新登入");
-                                window.location.href = "/login";
+                                window.location.href = "/flask/login";
                             }
                             this.message = '無法獲取資料：' + err.message;
                         }
@@ -338,7 +337,7 @@
 
                     async deldata(url, delitem) {
                         try {
-                            const response = await api.delete(url, {
+                            const response = await axios.delete(url, {
                                 headers: {
                                     Authorization: `Bearer ${gettoken}`
                                 }
@@ -382,7 +381,7 @@
                     
                     async senddata(url, payload) {
                         try {
-                            const response = await api.post(url, payload, {
+                            const response = await axios.post(url, payload, {
                                 headers: {
                                     Authorization: `Bearer ${gettoken}`
                                 }
@@ -418,7 +417,7 @@
                 
                     async updatedata(url, payload) {
                         try {
-                            const response = await api.put(url, payload, {
+                            const response = await axios.put(url, payload, {
                                 headers: {
                                     Authorization: `Bearer ${gettoken}`
                                 }
@@ -464,7 +463,7 @@
                             .filter(m => m.status === '待分配')
                             .map(m => m.id)
                         try {
-                            this.updatedata('/missions', {data: this.sortedMissions})
+                            this.updatedata('/api/missions', {data: this.sortedMissions})
                         } catch (err) {
                             console.error(err)
                         }

@@ -5,7 +5,7 @@ from datetime import datetime
 from shared_state import missions_dict
 from fastapi_app.routers.auth import verify_token
 
-router = APIRouter(prefix="/missions", tags=["missions"])
+router = APIRouter(prefix="/api/missions", tags=["missions"])
 
 class MissionModel(BaseModel):
     name: str

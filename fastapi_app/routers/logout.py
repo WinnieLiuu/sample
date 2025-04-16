@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi import Request
 from fastapi_app.utils.openapi_utils import simplified_openapi
 
-router = APIRouter(prefix="/logout", tags=["logout"])
+router = APIRouter(prefix="/api/logout", tags=["logout"])
 
 @router.post("/")
 async def logout(request: Request):

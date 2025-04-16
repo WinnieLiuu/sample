@@ -1,1 +1,6 @@
-flask
+Flask 
+fastapi 
+uvicorn 
+PyJWT 
+apscheduler 
+flask_jwt_extended
