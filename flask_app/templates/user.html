@@ -15,17 +15,17 @@
             </tr>
         </thead>
         <tbody>
-            <tr v-if="users.length === 0">
+            <tr v-if="values.length === 0">
                 <td colspan="5">尚無資料</td>
             </tr>
               <!-- 如果有資料則使用 v-for 進行遍歷 -->
-            <tr v-else v-for="user in users" :key="user.id">
-                <td>[[ user.id ]]</td>
+            <tr v-for="(user, index) in values" :key="user.id">
+                <td>[[ index + 1 ]]</td>
                 <td>[[ user.account ]]</td>
                 <td>[[ user.name ]]</td>
                 <td>[[ user.password ]]</td>
-                <td><button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateModal" @click="editUser(user.account)">修改</button></td>
-                <td><button type="button" class="btn btn-danger" @click="delData(user.account)">刪除</button></td>
+                <td><button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateModal" @click="edituserFromAPI(user.account)">修改</button></td>
+                <td><button type="button" class="btn btn-danger" @click="deldataFromAPI(user.account)">刪除</button></td>
             </tr>
         </tbody>
     </table>
@@ -41,18 +41,18 @@
             <div class="modal-body">
                 <div class="form-group" style="text-align: left">
                     <label>使用者編號</label>
-                    <input type="text" v-model="account" class="form-control p_input">
+                    <input type="text" v-model="selectedUser.account" class="form-control p_input">
                 </div>
                 <div class="form-group">
                     <label>使用者名稱</label>
-                    <input type="email" v-model="name" class="form-control p_input">
+                    <input type="email" v-model="selectedUser.name" class="form-control p_input">
                 </div>
                 <div class="form-group">
                     <label>密碼</label>
-                    <input type="password" v-model="password" class="form-control p_input">
+                    <input type="password" v-model="selectedUser.password" class="form-control p_input">
                 </div>
                 <div class="text-center d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-block enter-btn" @click="sendData">建立</button>
+                    <button type="submit" class="btn btn-primary btn-block enter-btn" @click="senddataFromAPI">建立</button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -83,7 +83,7 @@
                     <input type="password" v-model="selectedUser.password" class="form-control p_input">
                 </div>
                 <div class="text-center d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-block enter-btn" @click="updateData(selectedUser.account)">修改</button>
+                    <button type="submit" class="btn btn-primary btn-block enter-btn" @click="updatedataFromAPI(selectedUser.account)">修改</button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -107,234 +107,50 @@
 </div>
 {% endblock %}
 
-{% block username %}[[ userData ]]{% endblock %}
-
 {% block js %}
 <script type="module">
-    const { createApp, ref, onMounted, onUnmounted } = Vue;
 
-    const app = createApp({
-        setup() {
-            const message = ref("");
-            const users = ref([]); // 用來存 API 回傳的資料
-            const loading = ref(true);  // 讀取狀態
-            const error = ref(null);  // 錯誤訊息
-            const userData = ref(null);
+    window.vueApp.getdataFromAPI = function() {
+        const url = '/users'; // ✅ API 路徑
+        this.getdata(url);
+    };
 
-            const account = ref(""); // 綁定輸入值
-            const name = ref(""); // 綁定輸入值
-            const password = ref(""); // 綁定輸入值
+    window.vueApp.getdataFromAPI();
 
-            const selectedUser = ref({ id: null, account: "", name: "" });
+    // 每秒自動執行 getdata
+    setInterval(() => {
+        // 確保使用 Vue app 的上下文
+        window.vueApp.getdataFromAPI();
+    }, 1000);
 
-            const token = localStorage.getItem("token");
-            console.log(token);
+    window.vueApp.senddataFromAPI = function() {
+        const account = window.vueApp.selectedUser.account;
+        const name = window.vueApp.selectedUser.name;
+        const password = window.vueApp.selectedUser.password;
 
+        const url = `/users?account=${account}&name=${name}&password=${password}`; // ✅ API 路徑
+       
+        // 用 call 綁定 Vue 實例
+        window.vueApp.senddata(url, '');
+    };
 
-            const api = axios.create({
-                baseURL: 'http://localhost:5000',
-            });
+    window.vueApp.deldataFromAPI = function(account) {
+        const url = `/users/${account}`; // ✅ API 路徑
+        this.deldata(url);
+    };
 
-            let myModal = null; // 儲存 Bootstrap Modal 實例
-            let createModal = null; // 儲存 Bootstrap Modal 實例
-            let updateModal = null; // 儲存 Bootstrap Modal 實例
-            let intervalId = null; // 用來儲存 setInterval ID，以便停止請求
-
-            onMounted( async () => {
-                // check user has permission
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    // 沒有 token，直接跳轉到登入頁面
-                    window.location.href = '/login'
-                    return;
-                }
-
-                try {
-                    // 確認 token 是否有效
-                    const res = await axios.get('/profile', {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    });
-                    userData.value = res.data.logged_in_as;  // 如果 token 有效，將用戶資料設置進去
-                } catch (err) {
-                    // 如果 token 無效，清除 token 並跳轉到登入頁
-                    localStorage.removeItem('token');
-                    window.location.href = '/login'
-                } finally {
-                    loading.value = false;
-                }
-
-                const modalElement = document.getElementById('exampleModal');
-                myModal = new bootstrap.Modal(modalElement, {
-                    backdrop: 'static', // 禁止點擊背景關閉
-                    keyboard: false // 禁止按 Esc 關閉
-                });
-                const createModalElement = document.getElementById('createModal');
-                createModal = new bootstrap.Modal(createModalElement, {
-                    backdrop: 'static', // 禁止點擊背景關閉
-                    keyboard: false // 禁止按 Esc 關閉
-                });
-                const updateModalElement = document.getElementById('updateModal');
-                updateModal = new bootstrap.Modal(updateModalElement, {
-                    backdrop: 'static', // 禁止點擊背景關閉
-                    keyboard: false // 禁止按 Esc 關閉
-                });
-
-                getData()
-
-                intervalId = setInterval(async () => {
-                    getData()
-                }, 1000); // 每秒執行一次請求
-
-                
-            });
-
-            // 當組件卸載時，清除 setInterval
-            onUnmounted(() => {
-                if (intervalId) {
-                    clearInterval(intervalId); // 停止定時請求
-                }
-            });
-
-            const sendData = async () => {
-                try {
-                    const response = await api.post('/users/', {
-                        account: account.value,
-                        name: name.value,
-                        password: password.value
-                    });
-                    message.value = JSON.stringify(response.data.message);
-                    createModal.hide();
-                    myModal.show();
-
-                    // 延遲關閉
-                    setTimeout(() => {
-                        // 移除焦點
-                        if (document.activeElement) {
-                            document.activeElement.blur();
-                        }
-
-                        // 或將焦點轉移到頁面上的某個元素
-                        document.getElementById('app').focus();
-
-                        myModal.hide(); // 關閉 Modal
-                    }, 1500);
-
-                } catch (error) {
-                    console.error(error)
-                    message.value = error.message;
-                }
-            };
-
-            const getData = async () => {
-                try {
-                    const response = await api.get('/users/', {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    });
-                    users.value = response.data; // 儲存 API 回傳的資料
-                    /*console.log("Data received:", users.value);*/
-
-                } catch (err) {
-                    console.error(err)
-                    error.value = '無法獲取資料：' + err.message;
-                } finally {
-                loading.value = false;
-                }
-            };
-
-            // 點擊「修改」按鈕時，篩選出對應名稱的使用者
-            const editUser = async (account) => {
-                try {
-                    const user = users.value.find(u => u.account === account);
-                    if (user) {
-                        selectedUser.value = { ...user }; // 複製資料，避免影響原始數據
-                    }
-                } catch (error) {
-                    console.error(error)
-                    message.value = error.message;
-                }
-            };
-
-            const updateData = async (account) => {
-                try {
-                    const response = await api.put(`/users/${account}`, {
-                        'name':selectedUser.value.name,
-                        'password':selectedUser.value.password,
-
-                        headers: {
-                        'Content-Type': 'application/json'
-                        }
-                    });
-                    message.value = JSON.stringify(response.data.message);
-
-                    myModal.show();
-
-                    // 延遲關閉
-                    setTimeout(() => {
-                        // 移除焦點
-                        if (document.activeElement) {
-                            document.activeElement.blur();
-                        }
-
-                        // 或將焦點轉移到頁面上的某個元素
-                        document.getElementById('app').focus();
-
-                        myModal.hide(); // 關閉 Modal
-                    }, 1500);
-
-                } catch (error) {
-                    console.error(error)
-                    message.value = error.message;
-                }
-            };
-
-            const delData = async (account) => {
-                try {
-                    const response = await api.delete(`/users/${account}`, {
-                        headers: {
-                        'Content-Type': 'application/json'
-                        }
-                    });
-                    message.value = JSON.stringify(response.data.message);
-
-                    // 刪除成功後，移除該項
-                    const index = users.value.findIndex(m => m.account === account);
-                    if (index !== -1) {
-                        users.value.splice(index, 1);  // 移除該項
-                    }
-
-                    message.value = JSON.stringify(response.data.message);
-                    myModal.show();
-
-                    // 延遲關閉
-                    setTimeout(() => {
-                        // 移除焦點
-                        if (document.activeElement) {
-                            document.activeElement.blur();
-                        }
-
-                        // 或將焦點轉移到頁面上的某個元素
-                        document.getElementById('app').focus();
-
-                        myModal.hide(); // 關閉 Modal
-                    }, 1500);
-
-                } catch (error) {
-                    console.error(error)
-                    message.value = error.message;
-                }
-            };
-
-            return { users, loading, error, message, account, name, password, selectedUser, userData, delData, sendData, editUser, updateData };
+    window.vueApp.updatedataFromAPI = function(account) {
+        const url = `/users/${account}`; // ✅ API 路徑
+        const dapayloadta = {
+            'name': window.vueApp.selectedUser.name,
+            'password': window.vueApp.selectedUser.password,
         }
-    });
+        this.updatedata(url, payload);
+    };
 
-    // 設定自訂的插值符號，以避免與 Jinja2 衝突
-    app.config.compilerOptions.delimiters = ['[[', ']]'];
-    app.mount('#app');
+    window.vueApp.edituserFromAPI = function(account) {
+        this.edituser(account);
+    };
 
 </script>
 {% endblock %}

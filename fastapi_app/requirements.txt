@@ -1,0 +1,7 @@
+flask
+requests
+gunicorn
+fastapi
+uvicorn
+python-jose[cryptography]
+Flask-JWT-Extended

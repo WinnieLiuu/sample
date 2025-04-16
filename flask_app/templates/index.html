@@ -1,30 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
 
-<button type="button" class="btn btn-primary btn-fw card-title m-3">調整優先度</button>
-<button type="button" class="btn btn-success btn-fw card-title m-3">儲存</button>
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item" v-for="tab in tabs" :key="tab">
+        <a class="nav-link" :class="{ active: currentTab === tab }"
+            href="#" @click.prevent="currentTab = tab">[[ tab ]]</a>
+    </li>
+</ul>
+
+<p v-if="currentTab === '待分配'">拖曳「☰」圖示可移動任務列</p>
+
 <div class="table-responsive">
     <table class="table" style="font-size:50px">
         <thead>
             <tr>
+                <th v-if="currentTab === '待分配'" style="width: 40px;"></th> <!-- 拖曳欄 -->
                 <th>任務編號</th>
                 <th>任務名稱</th>
                 <th>車子編號</th>
                 <th>任務狀態</th>
+                <th>調整順序</th>
                 <th>刪除</th>
             </tr>
         </thead>
-        <tbody>
-            <tr v-if="missions.length === 0">
+        <tbody ref="sortableEl">
+            <tr v-if="filteredMissions.length === 0">
                 <td colspan="5">尚無資料</td>
             </tr>
               <!-- 如果有資料則使用 v-for 進行遍歷 -->
-            <tr v-else v-for="mission in missions" :key="mission.id">
+            <tr v-for="(mission, index) in filteredMissions" :key="mission.id">
+                <td v-if="currentTab === '待分配'" class="drag-handle">
+                    <span>☰</span>
+                </td>
                 <td>[[ mission.id ]]</td>
                 <td>[[ mission.name ]]</td>
                 <td>[[ mission.robot ]]</td>
                 <td>[[ mission.status ]]</td>
-                <td v-if="mission.status === '待分配'"><button type="button" class="btn btn-danger" @click="delData(mission.id)">刪除</button></td>
+                <td></td>
+                <td v-if="mission.status === '待分配'"><button type="button" class="btn btn-danger" @click="deldataFromAPI(mission.id)">刪除</button></td>
             </tr>
         </tbody>
     </table>
@@ -45,136 +59,26 @@
 
 {% endblock %}
 
-{% block username %}[[ userData ]]{% endblock %}
-
 {% block js %}
 <script type="module">
-    const { createApp, ref, onMounted, onUnmounted } = Vue;
-    const app = createApp({
-        setup() {
-            const message = ref("");
-            const missions = ref([]); // 用來存 API 回傳的資料
-            const loading = ref(true);  // 讀取狀態
-            const error = ref(null);  // 錯誤訊息
-            const userData = ref(null);
-            
-            const api = axios.create({
-                baseURL: 'http://localhost:5000',
-            });
 
-            let myModal = null; // 儲存 Bootstrap Modal 實例
-            let intervalId = null; // 用來儲存 setInterval ID，以便停止請求
+    window.vueApp.getdataFromAPI = function() {
+        const url = '/missions'; // ✅ API 路徑
+        this.getdata(url);
+    };
 
-            onMounted( async () => {
-                // check user has permission
-                const token = localStorage.getItem('token');
-                console.log('token:',token)
-                if (!token) {
-                    // 沒有 token，直接跳轉到登入頁面
-                    // window.location.href = '/login'
-                    return;
-                }
+    window.vueApp.getdataFromAPI();
 
-                try {
-                    // 確認 token 是否有效
-                    const res = await axios.get('/profile', {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    });
-                    userData.value = res.data.logged_in_as;  // 如果 token 有效，將用戶資料設置進去
-                } catch (err) {
-                    // 如果 token 無效，清除 token 並跳轉到登入頁
-                    console.log('err:',err)
-                    localStorage.removeItem('token');
-                    // window.location.href = '/login'
-                } finally {
-                    loading.value = false;
-                }
+    // 每秒自動執行 getdata
+    setInterval(() => {
+        // 確保使用 Vue app 的上下文
+        window.vueApp.getdataFromAPI();
+    }, 1000);
 
-                // modal
-                const modalElement = document.getElementById('exampleModal');
-                myModal = new bootstrap.Modal(modalElement, {
-                    backdrop: 'static', // 禁止點擊背景關閉
-                    keyboard: false // 禁止按 Esc 關閉
-                });
-
-                getData()
-
-                intervalId = setInterval(async () => {
-                    getData()
-                }, 1000); // 每秒執行一次請求
-            });
-
-            // 當組件卸載時，清除 setInterval
-            onUnmounted(() => {
-                if (intervalId) {
-                    clearInterval(intervalId); // 停止定時請求
-                }
-            });
-
-            const logout = () => {
-                // 清除 localStorage 中的 token
-                localStorage.removeItem('token');
-                // 跳轉到登錄頁面
-                window.location.href = '/login';
-            };
-
-            const getData = async () => {
-                try {
-                    const response = await api.get('/missions/');
-                    missions.value = response.data; // 儲存 API 回傳的資料
-                } catch (err) {
-                    error.value = '無法獲取資料：' + err.message;
-                } finally {
-                loading.value = false;
-                }
-            };
-
-            const delData = async (missionid) => {
-                try {
-                    const response = await api.delete(`/missions/${missionid}`, {
-                        headers: {
-                        'Content-Type': 'application/json'
-                        }
-                    });
-                    message.value = "請求成功：" + JSON.stringify(response.data);
-
-                    // 刪除成功後，移除該項
-                    const index = missions.value.findIndex(m => m.id === missionid);
-                    if (index !== -1) {
-                        missions.value.splice(index, 1);  // 移除該項
-                    }
-
-                    myModal.show();
-
-                    // 延遲關閉
-                    setTimeout(() => {
-                        // 移除焦點
-                        if (document.activeElement) {
-                            document.activeElement.blur();
-                        }
-
-                        // 或將焦點轉移到頁面上的某個元素
-                        document.getElementById('app').focus();
-
-                        myModal.hide(); // 關閉 Modal
-                    }, 1500);
-
-                } catch (error) {
-                    message.value = "請求失敗：" + error.message;
-                }
-            };
-
-            return { missions, loading, error, message, userData, delData, logout };
-        }
-    });
-
-    // 設定自訂的插值符號，以避免與 Jinja2 衝突
-    app.config.compilerOptions.delimiters = ['[[', ']]'];
-    app.mount('#app');
-
-
+    window.vueApp.deldataFromAPI = function(missionid) {
+        const url = `/missions/${missionid}`; // ✅ API 路徑
+        window.vueApp.deldata(url);
+    };
 
 </script>
 {% endblock %}

@@ -22,13 +22,11 @@
         <!-- Layout styles -->
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
         <!-- End layout styles -->
-        <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.png') }}" />
-
+        
         <style>
             .btn-custom {
                 font-size: 30px;
                 padding: 20px 40px;
-
             }
 
             /* 彈跳視窗 */
@@ -36,11 +34,46 @@
                 text-align: center;
             }
 
+            [v-cloak] {
+                display: none;
+            }
+
+            /* 覆蓋 Bootstrap 的背景色 */
+            .sortable-chosen td {
+                background-color: #cce5ff !important;
+                transition: background-color 0.2s ease;
+            }
+
+            .sortable-ghost td {
+                background-color: #d6f5f5 !important;
+                opacity: 0.6;
+            }
+
+            .sortable-drag td {
+                background-color: #007bff !important;
+                color: white !important;
+                transform: scale(1.02);
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+            }
+
+            .drag-handle {
+                cursor: grab;
+                font-size: 18px;
+            }
+
+            tr {
+                transition: all 0.2s ease-in-out;
+            }
+
+            .nav-tabs .nav-link.active {
+                color: #000000 !important;
+            }
+
         </style>
 
     </head>
     <body>
-        <div class="container-scroller" id="app">
+        <div class="container-scroller" id="app" v-cloak>
             <!-- partial:partials/_sidebar.html -->
             <nav class="sidebar sidebar-offcanvas" id="sidebar">
                 <ul class="nav">
@@ -73,19 +106,17 @@
             <!-- partial -->
             <div class="container-fluid page-body-wrapper">
             <!-- partial:partials/_navbar.html -->
-            <nav class="navbar p-0 fixed-top d-flex flex-row">
-                <div class="navbar-brand-wrapper d-flex d-lg-none align-items-center justify-content-center">
-                    <a class="navbar-brand brand-logo-mini" href="index.html"><img src="{{ url_for('static', filename='images/logo-mini.svg') }}" alt="logo" /></a>
-                </div>
-                <div class="navbar-menu-wrapper flex-grow d-flex align-items-stretch">
+            <nav class="navbar p-0 fixed-top d-flex flex-row">                            
+                <div class="navbar-menu-wrapper flex-grow d-flex align-items-stretch">                    
                     <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-toggle="minimize">
                         <span class="mdi mdi-menu"></span>
                     </button>
+                    <p class="mb-0 ml-3 mr-3 d-flex align-items-center">Token 剩餘時間：[[ timeLeft ]]</p>
                     <ul class="navbar-nav navbar-nav-right">
                         <li class="nav-item dropdown">
                             <a class="nav-link" id="profileDropdown" href="#" data-bs-toggle="dropdown">
                                 <div class="navbar-profile">
-                                    <p class="mb-0 d-none d-sm-block navbar-profile-name">{% block username %}{% endblock %}</p>
+                                    <p class="mb-0 d-none d-sm-block navbar-profile-name">[[ logged_in_as ]]</p>
                                     <i class="mdi mdi-menu-down d-none d-sm-block"></i>
                                 </div>
                             </a>
@@ -127,9 +158,28 @@
                     <div class="row">
                         <div class="col-md grid-margin stretch-card">
                             <div class="card">
-                                <div class="card-body">
+                                <div class="card-body">   
+                                    <!-- Bootstrap Modal -->
+                                    <div class="modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">提示</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body" v-text="message"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
                                     {% block content %}
                                     {% endblock %}
+
+                                    
+
+
+
                                 </div>
                             </div>
                         </div>
@@ -139,7 +189,6 @@
             </div>
             <!-- main-panel ends -->
             <!-- page-body-wrapper ends -->
-        </div>
         </div>
         <!-- container-scroller -->
         <!-- plugins:js -->
@@ -155,13 +204,352 @@
         <script src="{{ url_for('static', filename='vendors/js/misc.js') }}"></script>
         <script src="{{ url_for('static', filename='vendors/js/settings.js') }}"></script>
         <script src="{{ url_for('static', filename='vendors/js/todolist.js') }}"></script>
+        <script src="{{ url_for('static', filename='vendors/js/dashboard.js') }}"></script>
         <!-- endinject -->
         <!-- Custom js for this page -->
-        <script src="{{ url_for('static', filename='vendors/js/dashboard.js') }}"></script>
+        
         <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
         <script src="{{ url_for('static', filename='node_modules/axios/dist/axios.min.js') }}"></script>
-
+        <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+        
         <!-- End custom js for this page -->
+        <script type="module">
+            const { createApp, ref, onMounted, onUnmounted, computed, watchEffect } = Vue;
+            const gettoken = localStorage.getItem('token');
+            const api = axios.create({baseURL: 'http://localhost:5000'});
+
+            const account = null; // 綁定輸入值
+            const name = null; // 綁定輸入值
+            const password = null; // 綁定輸入值
+            
+            const modalElement = document.getElementById('exampleModal');
+            const createModalElement = document.getElementById('createModal');
+            const updateModalElement = document.getElementById('updateModal');
+
+            let myModal = null;
+            let createModal = null;
+            let updateModal = null;
+            let intervalId = null; // 用來儲存 setInterval ID，以便停止請求
+
+            const app = createApp({
+                data() {
+                    return {
+                        // token 倒數剩餘秒數
+                        timeLeft: 0,
+
+                        logged_in_as: localStorage.getItem('logged_in_as'),
+
+                        selectedUser: { id: null, account: "", name: "" },
+                        
+                        // index.html 用以存 getdata 回傳的資料
+                        values: [],
+                        message: '',                      
+
+                        // mission.html 用以存 postdata 回傳的結果
+                        postResult: null,
+
+                        // index.html
+                        tabs: ['全部', '進行中', '已完成', '待分配'],
+                        currentTab: '全部',
+                        sortableEl: null,
+                        statusPriority: {
+                            '進行中': 1,
+                            '已完成': 2,
+                            '待分配': 3
+                        },
+                    
+                    }
+                },
+                computed: {
+                    // 計算剩餘時間，格式化顯示，例如 "15 分 23 秒"
+                    timeLeftDisplay() {
+                        if (this.timeLeft <= 0) {
+                            return '已過期';
+                        }
+                        const minutes = Math.floor(this.timeLeft / 60);
+                        const seconds = this.timeLeft % 60;
+                        return minutes + ' 分 ' + seconds + ' 秒';
+                    },
+                    sortedMissions(){
+                        if (!this.values || !Array.isArray(this.values)) return [];
+                        return [...this.values].sort((a, b) => {
+                            return this.statusPriority[a.status] - this.statusPriority[b.status]
+                        })
+                    },
+                    filteredMissions(){
+                        if (this.currentTab === '全部') return this.sortedMissions
+                        return this.sortedMissions.filter(m => m.status === this.currentTab)
+                    }
+
+                },
+                methods: {
+                    logout() {
+                        console.log('logout')
+                        // 清除本地端儲存的 token
+                        localStorage.removeItem('token');
+                        // 跳轉到登錄頁面
+                        window.location.href = '/logout';
+                    },
+                    
+                    updateTimeLeft() {
+                        if (!gettoken) {
+                            this.timeLeft = '未登入';
+                            return;
+                        }
+        
+                        try {
+                            const decoded = jwt_decode(gettoken);
+                            const now = Math.floor(Date.now() / 1000); // 目前秒數
+                            const exp = decoded.exp; // 過期時間（秒）
+                            const remaining = exp - now;
+        
+                            if (remaining <= 0) {
+                                this.timeLeft = '已過期';
+                                this.logout();
+                            } else {
+                                const minutes = Math.floor(remaining / 60);
+                                const seconds = remaining % 60;
+                                this.timeLeft = `${minutes} 分 ${seconds} 秒`;
+                            }
+                        } catch (e) {
+                            console.error('Toekn 解析錯誤: ', e)
+                            this.timeLeft = 'Token 解析錯誤';
+                        }
+                    },                    
+
+                    // 共用 GET 方法，傳入 URL
+                    async getdata(url) {
+                        try {
+                            const response = await api.get(url, {
+                                headers: {
+                                    Authorization: `Bearer ${gettoken}`
+                                }
+                            });
+                            this.values = response.data; // 儲存 API 回傳的資料
+                        } catch (err) {
+                            if (err.response && err.response.status === 401) {
+                                alert("登入已過期，請重新登入");
+                                window.location.href = "/login";
+                            }
+                            this.message = '無法獲取資料：' + err.message;
+                        }
+                    },
+
+                    async deldata(url, delitem) {
+                        try {
+                            const response = await api.delete(url, {
+                                headers: {
+                                    Authorization: `Bearer ${gettoken}`
+                                }
+                            });
+                            this.message = "請求成功：" + JSON.stringify(response.data);
+
+                            // 刪除成功後，移除該項
+                            if (url.includes('missions')) {
+                                const index = this.values.findIndex(m => m.id === delitem);
+                                if (index !== -1) {
+                                    this.values.splice(index, 1);  // 移除該項
+                                }
+                            }
+                            if (url.includes('users')) {
+                                const index = this.values.findIndex(m => m.account === delitem);
+                                if (index !== -1) {
+                                    this.values.splice(index, 1);  // 移除該項
+                                }
+                            }
+
+                            myModal.show();
+
+                                // 延遲關閉
+                                setTimeout(() => {
+                                    // 移除焦點
+                                    if (document.activeElement) {
+                                        document.activeElement.blur();
+                                    }
+
+                                    // 或將焦點轉移到頁面上的某個元素
+                                    document.getElementById('app').focus();
+
+                                    myModal.hide(); // 關閉 Modal
+                                }, 1500);
+
+                        } catch (error) {
+                            console.error('刪除資料失敗: ', error);
+                            this.message = "請求失敗：" + error.message;
+                        }
+                    },
+                    
+                    async senddata(url, payload) {
+                        try {
+                            const response = await api.post(url, payload, {
+                                headers: {
+                                    Authorization: `Bearer ${gettoken}`
+                                }
+                            });
+                            
+                            this.message = response.data.message;
+                            console.log('message: ', this.message);
+                            if (createModalElement) {
+                                createModal.hide();
+                                
+                            }
+
+                            myModal.show();
+
+                            // 延遲關閉
+                            setTimeout(() => {
+                                // 移除焦點
+                                if (document.activeElement) {
+                                    document.activeElement.blur();
+                                }
+
+                                // 或將焦點轉移到頁面上的某個元素
+                                document.getElementById('app').focus();
+
+                                myModal.hide(); // 關閉 Modal
+                            }, 1500);
+
+                        } catch (error) {
+                            console.error('發送資料失敗: ', error);
+                            this.message = error.message;                            
+                        }
+                    },
+                
+                    async updatedata(url, payload) {
+                        try {
+                            const response = await api.put(url, payload, {
+                                headers: {
+                                    Authorization: `Bearer ${gettoken}`
+                                }
+                            });
+                            this.message = JSON.stringify(response.data.message);
+
+                            myModal.show();
+
+                            // 延遲關閉
+                            setTimeout(() => {
+                                // 移除焦點
+                                if (document.activeElement) {
+                                    document.activeElement.blur();
+                                }
+
+                                // 或將焦點轉移到頁面上的某個元素
+                                document.getElementById('app').focus();
+
+                                myModal.hide(); // 關閉 Modal
+                            }, 1500);
+
+                        } catch (error) {
+                            console.error('更新資料失敗: ', error);
+                            this.message = error.message;
+                        }                        
+                    },
+                    
+                    async editdata(filterdata) {
+                        try {
+                            const user = this.values.find(u => u.account === filterdata);
+                            if (user) {
+                                this.selectedUser = { ...user }; // 複製資料，避免影響原始數據
+                            }
+                        } catch (error) {
+                            console.error('篩選資料失敗: ', error);
+                            this.message = error.message;
+                        }
+                    },                
+                    
+                    async save(sortedMissions) {
+                        console.log('save sortedMissions: ', this.sortedMissions)
+                        const order = this.sortedMissions
+                            .filter(m => m.status === '待分配')
+                            .map(m => m.id)
+                        try {
+                            this.updatedata('/missions', {data: this.sortedMissions})
+                        } catch (err) {
+                            console.error(err)
+                        }
+                    },
+                },
+                mounted() {
+                    this.updateTimeLeft();
+                    // 每秒更新倒數計時
+                    setInterval(this.updateTimeLeft, 1000);
+
+                    // modal
+                    const modalElement = document.getElementById('exampleModal');
+                    if (modalElement) {
+                        myModal = new bootstrap.Modal(modalElement, {
+                            backdrop: 'static', // 禁止點擊背景關閉
+                            keyboard: false // 禁止按 Esc 關閉
+                        });
+                    }
+                    const createModalElement = document.getElementById('createModal');
+                    if (createModalElement) {
+                        createModal = new bootstrap.Modal(createModalElement, {
+                            backdrop: 'static', // 禁止點擊背景關閉
+                            keyboard: false // 禁止按 Esc 關閉
+                        });
+                    }
+                    const updateModalElement = document.getElementById('updateModal');
+                    if (updateModalElement) {
+                        updateModal = new bootstrap.Modal(updateModalElement, {
+                            backdrop: 'static', // 禁止點擊背景關閉
+                            keyboard: false // 禁止按 Esc 關閉
+                        });
+                    }
+
+                    // sortdata
+                    // 拖曳排序
+                    this.$watch(
+                        () => this.currentTab,
+                        (newVal) => {
+                            console.log('newVal: ', newVal)
+                            if (newVal === '待分配') {
+                                this.$nextTick(() => {
+                                    Sortable.create(this.$refs.sortableEl, {
+                                        animation: 200,
+                                        handle: '.drag-handle',
+                                        ghostClass: 'sortable-ghost',
+                                        chosenClass: 'sortable-chosen',
+                                        dragClass: 'sortable-drag',
+                                        onEnd: (evt) => {
+                                            const movedItem = this.filteredMissions[evt.oldIndex]
+                                            if (!movedItem || movedItem.status !== '待分配') return
+
+                                            const oldIndex = this.values.findIndex(m => m.id === movedItem.id)
+                                            const newItem = this.filteredMissions[evt.newIndex]
+                                            const newIndex = this.values.findIndex(m => m.id === newItem.id)
+
+                                            this.values.splice(oldIndex, 1)
+                                            this.values.splice(newIndex, 0, movedItem)
+                                            this.save()
+                                        }
+                                    });
+                                });
+                            }
+                        },
+                        { immediate: true }
+                    );
+                    
+                    
+
+
+
+                },
+                unmounted() {
+                    if (intervalId) {
+                        clearInterval(intervalId); // 停止定時請求
+                    }
+                }
+            });
+
+            // 設定 Vue compiler delimiters（這個只需要設定一次）
+            app.config.compilerOptions.delimiters = ['[[', ']]'];
+
+            // 將 Vue 實例設為全域變數供子模板呼叫
+            window.vueApp = app.mount('#app');
+
+        </script>
 
         {% block js %}
         {% endblock %}

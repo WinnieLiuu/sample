@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: flask-web
+    env: python
+    plan: free
+    rootDir: flask_app
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FASTAPI_URL
+        value: https://fastapi-api.onrender.com  # <- 記得部署 FastAPI 後再改這個網址
+      - key: JWT_SECRET
+        value: your-secret-key  # <- 自訂你的 JWT secret
+
+  - type: web
+    name: fastapi-api
+    env: python
+    plan: free
+    rootDir: fastapi_app
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host=0.0.0.0 --port=10000
+    envVars:
+      - key: JWT_SECRET
+        value: your-secret-key  # 同樣 secret，兩邊要一致

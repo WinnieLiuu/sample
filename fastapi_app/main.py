@@ -7,9 +7,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 import uvicorn
+import jwt
+from jwt import PyJWTError
 
 import importlib.util
 from pathlib import Path
+
+from .routers.auth import verify_token
 
 # === Tag metadata ===
 tags_metadata = [
@@ -22,6 +26,9 @@ tags_metadata = [
         "description": "查詢所有任務資訊。",
     },
 ]
+
+SECRET_KEY = 'your_secret_key'
+ALGORITHM = "HS256"
 
 # === App 初始化 ===
 app = FastAPI(
@@ -61,13 +68,26 @@ for file in router_files:
         app.include_router(module.router)
 
 # === OAuth2 定義 ===
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/access-token")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/access-token")
 
 # === 使用者驗證 ===
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    if token != "dummy_token_for_admin":
-        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
-    return {"username": "admin"}
+# def verify_token(token: str = Depends(oauth2_scheme)):
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         username: str = payload.get("sub")
+#         if username is None:
+#             raise HTTPException(
+#                 status_code=status.HTTP_401_UNAUTHORIZED,
+#                 detail="Token payload error",
+#                 headers={"WWW-Authenticate": "Bearer"},
+#             )
+#         return username
+#     except PyJWTError:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Could not validate token",
+#             headers={"WWW-Authenticate": "Bearer"},
+#         )
 
 # === 自定義 OpenAPI ===
 def simplified_openapi():

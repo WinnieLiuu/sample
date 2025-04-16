@@ -186,18 +186,25 @@
 		window.fetch = new Proxy(window.fetch, {
 			apply(fetch, that, args) {
 				return fetch.apply(that, args).then(async (res) => {
-				const url = res.url || "";
-				if (url.includes("login") && res.status === 200) {
-					console.log("✅ Login 成功，自動更新 Swagger UI");
+					const url = res.url || "";
+					if (url.includes("login") && res.status === 200) {
+						console.log("✅ Login 成功，自動更新 Swagger UI");
 
-					// 儲存登入狀態到 localStorage
-					localStorage.setItem("swagger_auth", JSON.stringify({
-						OAuth2PasswordBearer: { value: "dummy_token_for_admin" }
-					}));
+						// 先複製 response 並解析 json
+						const data = await res.clone().json();  // ✅ 正確取得 token
 
-					setTimeout(() => initSwaggerUI(), 300);
-				}
-				return res;
+						console.log('res.data:', data)
+
+						// 儲存登入狀態到 localStorage
+						localStorage.setItem("swagger_auth", JSON.stringify({
+							OAuth2PasswordBearer: { value: data.access_token }
+						}));
+						
+						localStorage.setItem("logged_in_as",data.logged_in_as);
+
+						setTimeout(() => initSwaggerUI(), 300);
+					}
+					return res;
 				});
 			}
 		});
@@ -231,6 +238,7 @@
 		// 🔐 插入登入狀態到 Swagger UI 的 topbar
 		function updateLoginStatusInTopbar() {
 			const storedAuth = localStorage.getItem("swagger_auth");
+			const logged_in_as = localStorage.getItem("logged_in_as");
 			console.log(storedAuth);
 			if (!storedAuth) {
 				access_level_text = "🔒 請先登入";
@@ -241,12 +249,9 @@
 			try {
 				const parsed = JSON.parse(storedAuth);
 				const token = parsed?.["OAuth2PasswordBearer"]?.value;
-				console.log(token);
-				if (token === "dummy_token_for_admin") {
-					access_level_text = "👤 使用者：admin";
-				} else {
-					access_level_text = "👤 使用者（未知）";
-				}
+				console.log('token:', token);
+				access_level_text = `👤 使用者：${logged_in_as}`;
+				
 			} catch (e) {
 				access_level_text = "🔒 請先登入";
 			}
