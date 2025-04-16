@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 import datetime
+import os
+from sqlalchemy import create_engine
 
 # 初始化資料庫物件（稍後與 app 綁定）
 db = SQLAlchemy()
@@ -15,8 +17,13 @@ def create_app():
     app.secret_key = 'your_secret_key'  # 用於 Session
 
     CORS(app, supports_credentials=True)
+
+    # deploy to render
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    engine = create_engine(DATABASE_URL)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
     
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:admin@localhost:5432/db'
+    # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:admin@localhost:5432/db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["SQLALCHEMY_ECHO"] = True
     app.config['JWT_SECRET_KEY'] = 'super-secret-key'
