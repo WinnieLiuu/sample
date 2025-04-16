@@ -6,3 +6,4 @@ apscheduler
 flask_jwt_extended
 Flask-SQLAlchemy
 flask_cors
+psycopg2
