@@ -18,12 +18,17 @@ def create_app():
 
     CORS(app, supports_credentials=True)
 
-    # deploy to render
-    DATABASE_URL = os.environ.get("DATABASE_URL")
-    engine = create_engine(DATABASE_URL)
+    ENV = os.getenv("ENVIRONMENT", "local")
+
+    if ENV == "render":
+        # deploy to render
+        DATABASE_URL = os.environ.get("DATABASE_URL")
+        engine = create_engine(DATABASE_URL)
+    else:
+        # local
+        DATABASE_URL = 'postgresql://admin:admin@localhost:5432/db'
+
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-    
-    # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:admin@localhost:5432/db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["SQLALCHEMY_ECHO"] = True
     app.config['JWT_SECRET_KEY'] = 'super-secret-key'
