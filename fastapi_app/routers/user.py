@@ -8,7 +8,6 @@ import os
 
 from fastapi_app.routers.auth import verify_token
 
-
 # 加入 flask_app 上層路徑
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from flask_app.models import Users
@@ -23,14 +22,16 @@ async def get_users(current_user: str = Depends(verify_token)):
         users = db.session.query(Users).all()
         return [{'id': user.id, 'account': user.account, 'name': user.name, 'password': user.password} for user in users]
 
-@router.get("/{account}")
-async def get_user_by_id(account: str, current_user: str = Depends(verify_token)):
+@router.post("/checkuser")
+async def get_user_by_id(userdata: dict, current_user: str = Depends(verify_token)):
+    data = userdata.get("data")
+    msg = "使用者已存在"
     with flask_main.app_context():
-        user = db.session.query(Users).filter_by(account=account).first()
+        user = db.session.query(Users).filter_by(account=data.get("account")).first()
         if user is None:
-            raise HTTPException(status_code=404, detail="User not found")
+            msg = "使用者不存在"
     return JSONResponse(
-        content={"username": user.name, "account": user.account, "password":user.password},
+        content={"message": msg},
         status_code=200
     )
 
@@ -44,7 +45,7 @@ def create_user(
 
     if not account:
         return {"error": f"❌ 使用者 【{account}】 未輸入"}, 400
-    with app.app_context():
+    with flask_main.app_context():
         new_user = Users(account=account, name=name, password=password)
         db.session.add(new_user)
         db.session.commit()
@@ -60,7 +61,7 @@ def update_user(
     password: Optional[str] = Query(None, description="The password of a user (will be used to login)"),
     current_user: str = Depends(verify_token)
 ):
-    with app.app_context():
+    with flask_main.app_context():
         user = db.session.query(Users).filter_by(account=account).first()
         if user:
             if name is not None:
@@ -75,7 +76,7 @@ def update_user(
 
 @router.delete("/{account}")
 def delete_user(account: str, current_user: str = Depends(verify_token)):
-    with app.app_context():
+    with flask_main.app_context():
         user = db.session.query(Users).filter_by(account=account).first()
         if user:
             db.session.delete(user)

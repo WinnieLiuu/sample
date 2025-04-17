@@ -20,7 +20,6 @@
                 <th>任務名稱</th>
                 <th>車子編號</th>
                 <th>任務狀態</th>
-                <th>調整順序</th>
                 <th>刪除</th>
             </tr>
         </thead>
@@ -34,11 +33,10 @@
                     <span>☰</span>
                 </td>
                 <td>[[ mission.id ]]</td>
-                <td>[[ mission.name ]]</td>
+                <td>[[ mission.missionName ]]</td>
                 <td>[[ mission.robot ]]</td>
-                <td>[[ mission.status ]]</td>
-                <td></td>
-                <td v-if="mission.status === '待分配'"><button type="button" class="btn btn-danger" @click="deldataFromAPI(mission.id)">刪除</button></td>
+                <td>[[ mission.missionStatus ]]</td>
+                <td v-if="mission.missionStatus === '待分配'"><button type="button" class="btn btn-danger" @click="deldataFromAPI(mission.id)">刪除</button></td>
             </tr>
         </tbody>
     </table>
@@ -64,7 +62,7 @@
 
     window.vueApp.getdataFromAPI = function() {
         const url = '/api/missions'; // ✅ API 路徑
-        this.getdata(url);
+        window.vueApp.getData(url);
     };
 
     window.vueApp.getdataFromAPI();
@@ -77,7 +75,7 @@
 
     window.vueApp.deldataFromAPI = function(missionid) {
         const url = `/api/missions/${missionid}`; // ✅ API 路徑
-        window.vueApp.deldata(url);
+        window.vueApp.delData(url);
     };
 
 </script>

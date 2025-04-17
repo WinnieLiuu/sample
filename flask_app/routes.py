@@ -29,6 +29,15 @@ def mission():
         return redirect(url_for('index'))
     return render_template("mission.html")
 
+@flask_main.route("/history")
+def mission_history():
+    # 從 session 中取得 token 與 username
+    token = session.get('token')
+    account = session.get('account')
+    if not token or not account:
+        return redirect(url_for('index'))
+    return render_template("mission_history.html")
+
 @flask_main.route("/user")
 def user():
     # 從 session 中取得 token 與 username

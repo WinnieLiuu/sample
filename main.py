@@ -1,4 +1,6 @@
 from flask_app.routes import flask_main  # Flask 應用
+from flask_app.models import Missions
+from flask_app import db
 from fastapi.middleware.wsgi import WSGIMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from threading import Thread
@@ -7,6 +9,7 @@ import signal
 from fastapi_app.app import fastapi_main  # FastAPI 應用
 from shared_state import missions_dict, update_missions, delete_mission
 import uvicorn
+from datetime import datetime
 
 timecount = 0
 
@@ -17,15 +20,18 @@ def timed_job():
         timecount += 1
         keys = list(missions_dict.keys())
         if timecount == 5:
-            update_missions(keys[0], {"robot": 1, "status": "進行中"})
+            update_missions(keys[0], {"robot": 1, "missionStatus": "進行中", "startTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
         elif timecount == 10:
-            update_missions(keys[0], {"status": "已完成"})
+            update_missions(keys[0], {"missionStatus": "已完成", "finishTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+            with flask_main.app_context():
+                new_mission = Missions(missionId=keys[0], missionName=missions_dict[keys[0]]["missionName"], robot=missions_dict[keys[0]]["robot"], missionStatus=missions_dict[keys[0]]["missionStatus"], startTime=missions_dict[keys[0]]["startTime"], finishTime=missions_dict[keys[0]]["finishTime"])
+                db.session.add(new_mission)
+                db.session.commit()
         elif timecount == 12:
             timecount = 0
             delete_mission(keys[0])
     else:
         timecount = 0
-    print(f'timecount: {timecount}')
 
 # 啟動 APScheduler
 def start_scheduler():

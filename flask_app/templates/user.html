@@ -1,7 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 
-<button type="button" class="btn btn-primary btn-fw card-title m-3" data-bs-toggle="modal" data-bs-target="#createModal">新增使用者</button>
+<button type="button" class="btn btn-primary btn-fw card-title m-3" @click="clearForm" data-bs-toggle="modal" data-bs-target="#createModal">新增使用者</button>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <label class="form-label me-2 text-black fs-4">每頁顯示</label>
+        <select class="form-select d-inline-block w-auto bg-white pe-5" v-model.number="pageSize">
+            <option :value="5">5 筆</option>
+            <option :value="10">10 筆</option>
+        </select>
+    </div>
+</div>
 <div class="table-responsive">
     <table class="table" style="font-size:50px">
         <thead>
@@ -13,14 +22,23 @@
                 <th>修改</th>
                 <th>刪除</th>
             </tr>
+            <!-- 篩選列 -->
+            <tr>
+                <th></th>
+                <th><input type="text" class="form-control bg-white text-black" v-model="filters.account"placeholder="搜尋使用者代號"></th>
+                <th><input type="text" class="form-control bg-white text-black" v-model="filters.name" placeholder="搜尋使用者名稱"></th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
         </thead>
         <tbody>
             <tr v-if="values.length === 0">
                 <td colspan="5">尚無資料</td>
             </tr>
               <!-- 如果有資料則使用 v-for 進行遍歷 -->
-            <tr v-for="(user, index) in values" :key="user.id">
-                <td>[[ index + 1 ]]</td>
+            <tr v-for="(user, index) in paginatedUsers" :key="user.id">
+                <td>[[ (currentPage - 1) * pageSize + index + 1 ]]</td>
                 <td>[[ user.account ]]</td>
                 <td>[[ user.name ]]</td>
                 <td>[[ user.password ]]</td>
@@ -30,6 +48,24 @@
         </tbody>
     </table>
 </div>
+
+<!-- 分頁按鈕 -->
+<nav>
+    <ul class="pagination justify-content-center mt-4">
+        <li 
+        class="page-item" 
+        v-for="page in totalPages" 
+        :key="page"
+        :class="{ active: currentPage === page }"
+        >
+        <button 
+            class="page-link" 
+            @click="currentPage = page"
+            :class="{ 'active-page': currentPage === page }"
+        >[[ page ]]</button>
+        </li>
+    </ul>
+</nav>
 
 <!-- create user -->
 <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
@@ -41,7 +77,10 @@
             <div class="modal-body">
                 <div class="form-group" style="text-align: left">
                     <label>使用者編號</label>
-                    <input type="text" v-model="selectedUser.account" class="form-control p_input">
+                    <input type="text" v-model="selectedUser.account" class="form-control p_input" @blur="checkData('/api/users/checkuser', {data:{account: selectedUser.account}})" @focus="usernameExists = false">
+                    <div class="col-sm-4" v-if="usernameExists">
+                        <span style="color: red !important;">帳號已存在</span>
+                    </div>                    
                 </div>
                 <div class="form-group">
                     <label>使用者名稱</label>
@@ -52,8 +91,8 @@
                     <input type="password" v-model="selectedUser.password" class="form-control p_input">
                 </div>
                 <div class="text-center d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-block enter-btn" @click="senddataFromAPI">建立</button>
-                </div>
+                    <button type="submit" class="btn btn-primary btn-block enter-btn" :disabled="!canSubmit" @click="senddataFromAPI">建立</button>
+                </div>                
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
@@ -93,18 +132,6 @@
     </div>
 </div>
 
-<!-- Bootstrap Modal -->
-<div class="modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">提示</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">[[ message ]]</div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block js %}
@@ -112,7 +139,7 @@
 
     window.vueApp.getdataFromAPI = function() {
         const url = '/api/users'; // ✅ API 路徑
-        this.getdata(url);
+        window.vueApp.getData(url);
     };
 
     window.vueApp.getdataFromAPI();
@@ -131,25 +158,25 @@
         const url = `/api/users?account=${account}&name=${name}&password=${password}`; // ✅ API 路徑
        
         // 用 call 綁定 Vue 實例
-        window.vueApp.senddata(url, '');
+        window.vueApp.sendData(url, '');
     };
 
     window.vueApp.deldataFromAPI = function(account) {
         const url = `/api/users/${account}`; // ✅ API 路徑
-        this.deldata(url);
+        window.vueApp.delData(url);
     };
 
     window.vueApp.updatedataFromAPI = function(account) {
         const url = `/api/users/${account}`; // ✅ API 路徑
-        const dapayloadta = {
+        const payload = {
             'name': window.vueApp.selectedUser.name,
             'password': window.vueApp.selectedUser.password,
         }
-        this.updatedata(url, payload);
+        window.vueApp.updateData(url, payload);
     };
 
     window.vueApp.edituserFromAPI = function(account) {
-        this.edituser(account);
+        window.vueApp.editData(account);
     };
 
 </script>
