@@ -361,7 +361,7 @@
                         return Math.ceil(this.filteredUsers.length / this.pageSize);
                     },
 
-                    filteredHistorys() {
+                    filteredHistory() {
                         return this.values.filter(m => {
                             const missionIdMatch = m.missionId.toLowerCase().includes(this.historyFilters.missionId.toLowerCase());
                             const missionNameMatch = this.historyFilters.missionName ? m.missionName === this.historyFilters.missionName : true;
@@ -372,12 +372,15 @@
                             return missionIdMatch && missionNameMatch && robotMatch && missionStatus && startTimeMatch && finishTimeMatch;
                         });
                     },
+                    sortedHistory() {
+                        return this.filteredHistory.slice().sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+                    },
                     paginatedMissions() {
                         const start = (this.currentPage - 1) * this.pageSize;
-                        return this.filteredHistorys.slice(start, start + this.pageSize);
+                        return this.sortedHistory.slice(start, start + this.pageSize);
                     },
                     historyTotalPages() {
-                        return Math.ceil(this.filteredHistorys.length / this.pageSize);
+                        return Math.ceil(this.sortedHistory.length / this.pageSize);
                     },
                     uniqueRobots() {
                         const robots = this.values.map(m => m.robot);
@@ -387,7 +390,7 @@
                         const statuses = this.values.map(m => m.missionStatus);
                         return [...new Set(statuses)];
                     },
-
+                    
 
                 },
                 methods: {
