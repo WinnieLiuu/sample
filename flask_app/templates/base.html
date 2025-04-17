@@ -340,7 +340,7 @@
                     },
                     filteredMissions() {
                         if (this.currentTab === '全部') return this.sortedMissions
-                        return this.sortedMissions.filter(m => m.status === this.currentTab)
+                        return this.sortedMissions.filter(m => m.missionStatus === this.currentTab)
                     },
                     canSubmit() {
                         return this.selectedUser.account && this.selectedUser.name && this.selectedUser.password && !this.usernameExists
@@ -568,7 +568,7 @@
                     
                     async save(sortedMissions) {
                         const order = this.sortedMissions
-                            .filter(m => m.status === '待分配')
+                            .filter(m => m.missionStatus === '待分配')
                             .map(m => m.id)
                         try {
                             this.updateData('/api/missions', {data: this.sortedMissions})
@@ -678,7 +678,7 @@
                                         dragClass: 'sortable-drag',
                                         onEnd: (evt) => {
                                             const movedItem = this.filteredMissions[evt.oldIndex];
-                                            if (!movedItem || movedItem.status !== '待分配') return;
+                                            if (!movedItem || movedItem.missionStatus !== '待分配') return;
 
                                             const oldIndex = this.values.findIndex(m => m.id === movedItem.id);
                                             const newItem = this.filteredMissions[evt.newIndex];
