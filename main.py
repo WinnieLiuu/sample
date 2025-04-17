@@ -48,15 +48,15 @@ def run_app():
 def signal_handler(sig, frame):
     print("✅ APScheduler 已停止")
     sys.exit(0)
+    
+signal.signal(signal.SIGINT, signal_handler)
+
+start_scheduler()
+# 掛載 Flask 應用到 FastAPI (此例會將所有 /hello_flask 的請求轉給 Flask 處理)
+fastapi_main.mount("/flask", WSGIMiddleware(flask_main))
 
 # 程式主入口
-if __name__ == "__main__":
-    signal.signal(signal.SIGINT, signal_handler)
-
-    start_scheduler()
-    # 掛載 Flask 應用到 FastAPI (此例會將所有 /hello_flask 的請求轉給 Flask 處理)
-    fastapi_main.mount("/flask", WSGIMiddleware(flask_main))
-
+if __name__ == "__main__":   
     # 若在本地測試，可啟動 Uvicorn
     uvicorn.run(fastapi_main, host="0.0.0.0", port=8000)
     print("✅ 所有服務已啟動")
