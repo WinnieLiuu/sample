@@ -19,6 +19,10 @@ def create_access_token(data: dict):
     expire = datetime.utcnow() + timedelta(minutes=30)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    
+@router.get("/")
+def root():
+    return {"status": "ok"}
 
 @router.post("/")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = None):
