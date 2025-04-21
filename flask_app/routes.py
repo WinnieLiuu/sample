@@ -10,9 +10,7 @@ flask_main = create_app()
 
 SECRET_KEY = 'super-secret-key'
 
-app = Flask(__name__)
-
-@app.route("/ping")
+@flask_main.route("/ping")
 def ping():
     return jsonify(status="ok")
 
