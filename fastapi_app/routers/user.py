@@ -79,6 +79,11 @@ def delete_user(account: str, current_user: str = Depends(verify_token)):
     with flask_main.app_context():
         user = db.session.query(Users).filter_by(account=account).first()
         if user:
+            if user.account == "admin":
+                return JSONResponse(
+                    content={"message": "❌ 管理員帳號不能刪除"},
+                    status_code=400
+                )
             db.session.delete(user)
             db.session.commit()
             return JSONResponse(
