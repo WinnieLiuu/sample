@@ -10,6 +10,12 @@ flask_main = create_app()
 
 SECRET_KEY = 'super-secret-key'
 
+app = Flask(__name__)
+
+@app.route("/ping")
+def ping():
+    return jsonify(status="ok")
+
 @flask_main.route("/index")
 def index():
     # 從 session 中取得 token 與 username
